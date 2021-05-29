@@ -49,6 +49,9 @@ def run():
                             else:
                                 splitted[gap] = '....... .'
                                 gaped.append(gap)
+                        else:
+                            splitted[gap] = '........'
+                            gaped.append(gap)
                         gap_number -= 1
 
 
