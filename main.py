@@ -1,6 +1,7 @@
 import random
 from tkinter import *
 from tkinter import messagebox
+from stop_words import get_stop_words
 
 def select_all(event):
     text_box.tag_add(SEL, "1.0", END)
@@ -9,6 +10,8 @@ def select_all(event):
     return 'break'
 
 def run():
+    stop_words = get_stop_words('pl')
+
     content = text_box.get(1.0, END)
 
     splitted = content.split()
@@ -31,7 +34,7 @@ def run():
         gap = random.randint(1, len(splitted) - 2)
         if gap not in gaped:
             if gap < len(splitted):
-                if len(splitted[gap]) > 3:
+                if splitted[gap] not in stop_words:
                     if splitted[gap - 1] != '........' and splitted[gap + 1] != '........':
                         for x in ['.', ',']:
                             if x in splitted[gap]:
@@ -70,7 +73,7 @@ text_box.bind("<Control-Key-A>", select_all)
 
 label = Label(root, text='Liczba luk', font=("Arial", 12))
 label.grid(row=1, column=0, pady=5, sticky=E, padx=2)
-entry1 = Entry(root, width=int(screen_width/200))
+entry1 = Entry(root, width=int(screen_width/200), font=("Arial 11"))
 entry1.grid(row=1, column=1, pady=5, sticky=W, ipady=int(screen_height/200))
 entry1.insert(1, '10')
 
