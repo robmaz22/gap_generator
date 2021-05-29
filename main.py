@@ -34,16 +34,22 @@ def run():
         gap = random.randint(1, len(splitted) - 2)
         if gap not in gaped:
             if gap < len(splitted):
-                if splitted[gap] not in stop_words:
+
+                word = splitted[gap]
+                word = word.replace('.','')
+                word = word.replace(',','')
+                word = word.lower()
+
+                if word not in stop_words and len(word) > 1:
                     if splitted[gap - 1] != '........' and splitted[gap + 1] != '........':
-                        for x in ['.', ',']:
-                            if x in splitted[gap]:
-                                splitted[gap] = f'........{x}'
+                        if '.' in splitted[gap] or ',' in splitted[gap]:
+                            if ',' in splitted[gap]:
+                                splitted[gap] = f'........,'
                                 gaped.append(gap)
                             else:
-                                splitted[gap] = '........'
+                                splitted[gap] = '....... .'
                                 gaped.append(gap)
-                            gap_number -= 1
+                        gap_number -= 1
 
 
     joined = ' '.join(splitted)
@@ -84,7 +90,7 @@ run_btn = Button(root, text='Generuj',
                  height=int(screen_height/300))
 run_btn.grid(row=2, column=0, columnspan=3, pady=10)
 
-version = 'Autor: Robert\nWersja 1.3'
+version = 'Autor: Robert\nWersja 2.0'
 label1 = Label(root, text=version, font=("Arial", 9))
 label1.grid(row=3, column=1, sticky=E)
 
