@@ -102,15 +102,35 @@ def ask_quit():
         root.destroy()
 
 
+def save_file():
+    path = filedialog.asksaveasfilename(title='Zapisz plik',
+                                        filetypes=(("Plik tekstowy", "*.txt"), ("Wszystkie pliki", "*.*")))
+
+    try:
+        with open(path, 'w') as file:
+            content = text_box.get(1.0, END)
+            file.write(content)
+        messagebox.showinfo('Sukces', 'Poprawnie zapisano plik!')
+    except Exception:
+        return
+
+def info():
+    info_window = Toplevel(root)
+    # info_window.geometry('300x100')
+    info_window.resizable(False, False)
+    info_window.title("O programie")
+    Label(info_window,text="Program do generowania luk w tekscie.\nAutor: Robert\nWersja: 2.5").pack()
+
+
 menubar = Menu(root)
 filemenu = Menu(menubar, tearoff=0)
 filemenu.add_command(label="Nowy", command=new_text)
 filemenu.add_command(label="Otwórz", command=open_text)
-filemenu.add_command(label="Zapisz jako")
+filemenu.add_command(label="Zapisz jako", command=save_file)
 menubar.add_cascade(label="Plik", menu=filemenu)
 
 helpmenu = Menu(menubar, tearoff=0)
-helpmenu.add_command(label="O programie")
+helpmenu.add_command(label="O programie", command=info)
 menubar.add_cascade(label="Pomoc", menu=helpmenu)
 
 root.config(menu=menubar)
@@ -118,7 +138,8 @@ root.config(menu=menubar)
 scrollbar = Scrollbar(root)
 scrollbar.grid(row=0, column=3, sticky=NS)
 
-text_box = Text(root, wrap=WORD, yscrollcommand=scrollbar.set,
+text_box = Text(root, wrap=WORD,
+                yscrollcommand=scrollbar.set,
                 width=int(screen_width / 6) - 30,
                 height=int(screen_height / 20) - 2)
 
@@ -139,10 +160,6 @@ run_btn = Button(root, text='Generuj',
                  width=int(screen_width / 50),
                  height=int(screen_height / 300))
 run_btn.grid(row=2, column=0, columnspan=3, pady=10)
-
-version = 'Autor: Robert\nWersja 2.0'
-label1 = Label(root, text=version, font=("Arial", 9))
-label1.grid(row=3, column=1, sticky=E)
 
 root.protocol("WM_DELETE_WINDOW", ask_quit)
 root.mainloop()
