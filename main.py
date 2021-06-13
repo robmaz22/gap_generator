@@ -71,12 +71,20 @@ def new_text():
         text_box.delete(1.0, END)
 
 
+def resize_text(event):
+    text_width = event.width
+    text_height = event.height
+    text_box.config(width=text_width, height=text_height)
+
+
 root = Tk()
 root.title('GENERATOR LUK')
-root.resizable(False, False)
-screen_width = int((root.winfo_screenwidth() / 2))
-screen_height = int((root.winfo_screenheight() / 2) + 200)
-root.geometry(f'{screen_width}x{screen_height}')
+window_width = int((root.winfo_screenwidth() / 2))
+window_height = int((root.winfo_screenheight() / 2) + 200)
+root.geometry(f'{window_width}x{window_height}')
+Grid.rowconfigure(root, index=0, weight=1)
+Grid.columnconfigure(root, index=0, weight=1)
+root.minsize(300, 300)
 
 
 def open_text():
@@ -114,12 +122,13 @@ def save_file():
     except Exception:
         return
 
+
 def info():
     info_window = Toplevel(root)
     # info_window.geometry('300x100')
     info_window.resizable(False, False)
     info_window.title("O programie")
-    Label(info_window,text="Program do generowania luk w tekscie.\nAutor: Robert\nWersja: 2.5").pack()
+    Label(info_window, text="Program do generowania luk w tekscie.\nAutor: Robert\nWersja: 2.5").pack()
 
 
 menubar = Menu(root)
@@ -140,8 +149,8 @@ scrollbar.grid(row=0, column=3, sticky=NS)
 
 text_box = Text(root, wrap=WORD,
                 yscrollcommand=scrollbar.set,
-                width=int(screen_width / 6) - 30,
-                height=int(screen_height / 20) - 2)
+                width=int(window_width / 6) - 30,
+                height=int(window_height / 20) - 2)
 
 scrollbar.config(command=text_box.yview)
 text_box.grid(row=0, column=0, columnspan=2)
@@ -150,16 +159,18 @@ text_box.bind("<Control-Key-A>", select_all)
 
 label = Label(root, text='Liczba luk', font=("Arial", 12))
 label.grid(row=1, column=0, pady=5, sticky=E, padx=2)
-entry1 = Entry(root, width=int(screen_width / 200), font=("Arial 11"))
-entry1.grid(row=1, column=1, pady=5, sticky=W, ipady=int(screen_height / 200))
+entry1 = Entry(root, width=int(window_width / 200), font=("Arial 11"))
+entry1.grid(row=1, column=1, pady=5, sticky=W, ipady=int(window_height / 200))
 entry1.insert(1, '10')
 
 run_btn = Button(root, text='Generuj',
                  command=run,
                  font=("Arial", 12),
-                 width=int(screen_width / 50),
-                 height=int(screen_height / 300))
+                 width=int(window_width / 50),
+                 height=int(window_height / 300))
 run_btn.grid(row=2, column=0, columnspan=3, pady=10)
 
+root.bind('<Configure>', resize_text)
 root.protocol("WM_DELETE_WINDOW", ask_quit)
+
 root.mainloop()
