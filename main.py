@@ -5,11 +5,11 @@ from tkinter.ttk import Combobox
 from tkinter import font
 from stop_words import get_stop_words
 from tkinter import filedialog
+from File_operations import readfile, savefile
 
 
 class App:
     def __init__(self, master):
-        # self.version = 3.0
         self.master = master
         self.master.title('GENERATOR LUK')
         self.window_width = int((root.winfo_screenwidth() / 2))
@@ -150,11 +150,14 @@ class App:
 
     def open_text(self):
         path = filedialog.askopenfilename(title='Wybierz plik',
-                                          filetypes=(("Plik tekstowy", "*.txt"), ("Wszystkie pliki", "*.*")))
-
+                                          filetypes=(("Plik tekstowy", "*.txt"),
+                                                     ("Dokument programu Word 2007-365", "*.docx"),
+                                                     ("Wszystkie pliki", "*.*")))
         try:
-            with open(path, 'r') as file:
-                content = file.read()
+            if path.split('.')[-1] == 'txt':
+                content = readfile.read_txt(path)
+            else:
+                content = readfile.read_docx(path)
         except Exception:
             return
 
@@ -171,12 +174,15 @@ class App:
 
     def save_file(self):
         path = filedialog.asksaveasfilename(title='Zapisz plik',
-                                            filetypes=(("Plik tekstowy", "*.txt"), ("Wszystkie pliki", "*.*")))
-
+                                            filetypes=(("Plik tekstowy", "*.txt"),
+                                                       ("Dokument programu Word 2007-365", "*.docx"),
+                                                       ("Wszystkie pliki", "*.*")))
         try:
-            with open(path, 'w') as file:
-                content = self.text_box.get(1.0, END)
-                file.write(content)
+            content = self.text_box.get(1.0, END)
+            if path.split('.')[-1] == 'txt':
+                savefile.save_txt(path, content)
+            else:
+                savefile.save_docx(path, content)
             messagebox.showinfo('Sukces', 'Poprawnie zapisano plik!')
         except Exception:
             return
