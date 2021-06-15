@@ -1,5 +1,6 @@
 import random
 from tkinter import *
+from tkinter import colorchooser
 from tkinter import messagebox
 from tkinter.ttk import Combobox
 from tkinter import font
@@ -20,6 +21,7 @@ class App:
         self.master.minsize(300, 300)
         self.font = 'Arial'
         self.font_size = 11
+        self.color = '#000000'
         self.size_idx = 1
         self.font_idx = 1
 
@@ -201,9 +203,11 @@ class TextWindow(Toplevel):
         self.title("Ustawienia tekstu")
         self.font_size = app.font_size
         self.font = app.font
+        self.color = app.color
 
         Label(self, text="Czcionka:").grid(column=0, row=1, padx=10, pady=5)
         Label(self, text="Rozmiar tekstu:").grid(column=0, row=2, padx=10, pady=5)
+        Button(self, text='Kolor', command=self.choose_color).grid(column=2, row=1, rowspan=2, padx=5)
 
         self.cbox1 = Combobox(self, width=27)
         self.cbox2 = Combobox(self, width=27)
@@ -221,7 +225,7 @@ class TextWindow(Toplevel):
         self.cbox2.current(app.font_idx)
 
         labelframe = LabelFrame(self, text="Przykładowy tekst")
-        labelframe.grid(column=0, row=0, columnspan=2)
+        labelframe.grid(column=0, row=0, columnspan=3, pady=5)
 
         self.example = Label(labelframe, text="Ala ma kota.")
         self.example.pack()
@@ -229,8 +233,13 @@ class TextWindow(Toplevel):
         self.cbox1.bind("<<ComboboxSelected>>", self.change_example)
         self.cbox2.bind("<<ComboboxSelected>>", self.change_example)
 
-        Button(self, text='Zatwierdź', command=self.change_font).grid(column=0, row=3, columnspan=2,
+        Button(self, text='Zatwierdź', command=self.change_font).grid(column=0, row=3, columnspan=3,
                                                                       pady=15)
+
+    def choose_color(self):
+        color_code = colorchooser.askcolor(title="Wybierz kolor")
+        self.color = color_code[1]
+        self.example.config(fg=self.color)
 
     def change_example(self, event):
         self.font_size = self.cbox1.get()
@@ -238,10 +247,11 @@ class TextWindow(Toplevel):
         self.example.config(font=(self.font, self.font_size))
 
     def change_font(self):
-        app.text_box.config(font=(self.font, self.font_size))
+        app.text_box.config(font=(self.font, self.font_size), fg=self.color)
         try:
             app.size_idx = self.sizes.index(int(self.font_size))
             app.font_idx = self.fonts.index(self.font)
+            app.color = self.color
         except Exception:
             app.size_idx = 1
             app.font_idx = 1
