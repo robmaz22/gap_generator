@@ -1,4 +1,5 @@
 import random
+import tkinter.ttk as ttk
 from tkinter import *
 from tkinter import colorchooser
 from tkinter import messagebox
@@ -34,6 +35,7 @@ class App:
 
         self.option_menu = Menu(self.menubar, tearoff=0)
         self.option_menu.add_command(label="Tekst", command=self.config_text)
+        self.option_menu.add_command(label="Wygląd", command=self.config_app)
         self.menubar.add_cascade(label="Opcje", menu=self.option_menu)
 
         self.helpmenu = Menu(self.menubar, tearoff=0)
@@ -42,7 +44,7 @@ class App:
 
         self.master.config(menu=self.menubar)
 
-        self.scrollbar = Scrollbar(self.master)
+        self.scrollbar = ttk.Scrollbar(self.master)
         self.scrollbar.grid(row=0, column=3, sticky=NS)
 
         self.text_box = Text(root, wrap=WORD,
@@ -55,17 +57,15 @@ class App:
         self.text_box.bind("<Control-Key-a>", self.select_all)
         self.text_box.bind("<Control-Key-A>", self.select_all)
 
-        self.label = Label(root, text='Liczba luk:', font=("Arial", 12))
+        self.label = ttk.Label(self.master, text='Liczba luk:', font=("Arial", 12))
         self.label.grid(row=1, column=0, columnspan=3, pady=5, padx=30)
-        self.entry1 = Entry(root, width=int(self.window_width / 200), font="Arial 11", justify='center')
+        self.entry1 = ttk.Entry(self.master, width=int(self.window_width / 200), font="Arial 11", justify='center')
         self.entry1.grid(row=2, column=0, pady=1, ipady=int(self.window_height / 200))
         self.entry1.insert(1, '10')
 
-        self.run_btn = Button(root, text='Generuj',
-                              command=self.run,
-                              font=("Arial", 12),
-                              width=int(self.window_width / 50),
-                              height=int(self.window_height / 300))
+        self.run_btn = ttk.Button(self.master, text='Generuj',
+                                  style='AccentButton',
+                                  command=self.run)
         self.run_btn.grid(row=3, column=0, columnspan=3, pady=10)
 
         self.master.bind('<Configure>', self.resize_text)
@@ -86,7 +86,7 @@ class App:
 
         try:
             gap_number = int(self.entry1.get())
-        except Exception:
+        except ValueError:
             messagebox.showerror('Błąd', 'Błędna liczba luk!')
             return
 
@@ -195,6 +195,9 @@ class App:
     def config_text(self):
         TextWindow(self.master)
 
+    def config_app(self):
+        ConfigWindow(self.master)
+
 
 class TextWindow(Toplevel):
     def __init__(self, parent):
@@ -233,8 +236,9 @@ class TextWindow(Toplevel):
         self.cbox1.bind("<<ComboboxSelected>>", self.change_example)
         self.cbox2.bind("<<ComboboxSelected>>", self.change_example)
 
-        Button(self, text='Zatwierdź', command=self.change_font).grid(column=0, row=3, columnspan=3,
-                                                                      pady=15)
+        ttk.Button(self, text='Zatwierdź', style='AccentButton', command=self.change_font).grid(column=0, row=3,
+                                                                                                columnspan=3,
+                                                                                                pady=15)
 
     def choose_color(self):
         color_code = colorchooser.askcolor(title="Wybierz kolor")
@@ -258,17 +262,23 @@ class TextWindow(Toplevel):
         self.destroy()
 
 
+class ConfigWindow(Toplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+
 class InfoWindow(Toplevel):
     def __init__(self, parent):
         super().__init__(parent)
         self.resizable(False, False)
         self.title("O programie")
-        version = 3.1
+        version = 3.0
         Label(self, text=f"Program do generowania luk w tekscie.\nAutor: Robert\nWersja: {version}").pack()
 
 
 if __name__ == '__main__':
     root = Tk()
+    root.tk.call('source', 'Azure-ttk-theme/azure-dark.tcl')
+    ttk.Style().theme_use('azure-dark')
     app = App(root)
-
     root.mainloop()
