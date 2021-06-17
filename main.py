@@ -35,7 +35,7 @@ class App:
 
         self.option_menu = Menu(self.menubar, tearoff=0)
         self.option_menu.add_command(label="Tekst", command=self.config_text)
-        self.option_menu.add_command(label="Wygląd", command=self.config_app)
+        self.option_menu.add_command(label="Preferencje", command=self.config_app)
         self.menubar.add_cascade(label="Opcje", menu=self.option_menu)
 
         self.helpmenu = Menu(self.menubar, tearoff=0)
@@ -79,10 +79,11 @@ class App:
 
     def run(self):
         stop_words = get_stop_words('pl')
+        punctuation = ['.', ',', ':', '\n']
 
         content = self.text_box.get(1.0, END)
 
-        splitted = content.split()
+        splitted = content.split(' ')
 
         try:
             gap_number = int(self.entry1.get())
@@ -111,29 +112,14 @@ class App:
 
                     if word not in stop_words and len(word) > 1:
                         if splitted[gap - 1] != '........' and splitted[gap + 1] != '........':
-                            if '.' in splitted[gap] or ',' in splitted[gap]:
-                                if ',' in splitted[gap]:
-                                    splitted[gap] = f'........,'
-                                    gaped.append(gap)
-                                else:
-                                    splitted[gap] = '....... .'
-                                    gaped.append(gap)
+                            for p in punctuation:
+                                if p in splitted[gap]:
+                                    splitted[gap] = f'........{p}'
+                                    break
                             else:
                                 splitted[gap] = '........'
-                                gaped.append(gap)
                             gap_number -= 1
             cycle += 1
-
-        idx = 0
-
-        while idx < len(splitted) - 1:
-            word = splitted[idx]
-
-            if word == '*':
-                splitted.insert(idx, '\n')
-                idx += 1
-
-            idx += 1
 
         joined = ' '.join(splitted)
         self.text_box.delete(1.0, END)
@@ -280,5 +266,6 @@ if __name__ == '__main__':
     root = Tk()
     root.tk.call('source', 'Azure-ttk-theme/azure-dark.tcl')
     ttk.Style().theme_use('azure-dark')
+    #TODO uwzględnienie kilku tematów
     app = App(root)
     root.mainloop()
