@@ -45,15 +45,19 @@ class App:
         #####################################################################################################
         # MAIN WINDOW ELEMENTS
         ####################################################################################################
+        self.words_label = ttk.Label(self.master, text='Liczba wyrazów:', font=("Arial", 10))
+        self.words_label.grid(row=1, column=0, columnspan=3, pady=5, padx=5, sticky=W)
+        self.words_number = ttk.Label(self.master, text='0', font=("Arial", 10))
+        self.words_number.grid(row=1, column=0, columnspan=3, pady=5, padx=105, sticky=W)
         self.label = ttk.Label(self.master, text='Liczba luk:', font=("Arial", 12))
-        self.label.grid(row=1, column=0, columnspan=3, pady=5, padx=30)
+        self.label.grid(row=2, column=0, columnspan=3, pady=5, padx=30)
         self.entry1 = ttk.Entry(self.master, width=int(width / 200), font="Arial 11", justify='center')
-        self.entry1.grid(row=2, column=0, pady=1, ipady=int(height / 200))
+        self.entry1.grid(row=3, column=0, pady=1, ipady=int(height / 200))
         self.entry1.insert(1, '10')
 
         self.run_btn = ttk.Button(self.master, text='Generuj', style='AccentButton',
                                   command=self.run, )
-        self.run_btn.grid(row=3, column=0, columnspan=3, pady=10)
+        self.run_btn.grid(row=4, column=0, columnspan=3, pady=10)
 
         self.master.bind('<Configure>', self.resize_textbox)
         self.master.protocol("WM_DELETE_WINDOW", self.ask_quit)
@@ -77,6 +81,8 @@ class App:
         self.text_box.bind("<Control-Key-o>", self.open_text)
         self.text_box.bind("<Control-Key-s>", self.save_file)
         self.text_box.bind("<Control-Key-d>", self.clear_all)
+        self.text_box.bind('<KeyRelease>', self.key_press)
+        self.text_box.focus()
 
         #####################################################################################################
         # MENUBAR
@@ -111,6 +117,11 @@ class App:
         # MAIN FUNCTIONS
         ####################################################################################################
 
+    def key_press(self, event=None):
+        words = self.text_box.get("1.0", "end-1c")
+        number = words.split()
+        self.words_number.config(text=len(number))
+
     def change_theme(self):
         if self.theme == 'dark':
             self.master.tk_setPalette(WHITE)
@@ -144,7 +155,6 @@ class App:
         self.text_box.config(width=text_width, height=text_height)
 
     def run(self):
-        self.last_text = self.text_box.get(1.0, END)
 
         content = self.text_box.get(1.0, END)
         splited = content.split(' ')
@@ -154,6 +164,8 @@ class App:
             answer = messagebox.askyesno('Pytanie', 'Kontynuować?')
             if not answer:
                 return
+
+        self.last_text = self.text_box.get(1.0, END)
 
         try:
             gap_number = int(self.entry1.get())
@@ -165,12 +177,35 @@ class App:
             messagebox.showerror('Błąd', 'Błędna liczba luk!')
             return
 
+        popup = Toplevel()
+        popup.title('')
+        window_width = int((root.winfo_screenwidth() / 2))
+        window_height = int((root.winfo_screenheight() / 2))
+        popup.geometry(f'+{window_width}+{window_height}')
+
+        popup.overrideredirect(1)
+
+        popup.resizable(False, False)
+        Label(popup, text="Generowanie...").grid(row=0, column=0, padx=5, pady=5)
+
+        cycle = gap_number * 10
+        counter = 0
+        last_status = None
+        step = 100 / gap_number
+        progress = 0
+        progress_var = DoubleVar()
+        progress_bar = ttk.Progressbar(popup, variable=progress_var, maximum=100)
+        progress_bar.grid(row=1, column=0)
+        popup.pack_slaves()
+
+        index_left = list(range(len(splited)))
         gap_indexes = []
 
         if (len(splited) % 2 == 0 and len(splited) / 2 >= gap_number) or (
                 len(splited) + 1 % 2 == 0 and len(splited) + 1 / 2 >= gap_number):
-            while len(set(gap_indexes)) < gap_number:
-                idx = random.randint(0, len(splited) - 1)
+            while len(gap_indexes) < gap_number:
+                popup.update()
+                idx = random.choice(index_left)
 
                 if idx - 1 not in gap_indexes and idx + 1 not in gap_indexes:
                     word = splited[idx]
@@ -178,21 +213,66 @@ class App:
                         word = word.replace(char, '')
                     word = word.lower()
 
-                    if word not in self.stop_words:
+                    if word not in self.stop_words and len(word) >= 2:
                         gap_indexes.append(idx)
+                        index_left.remove(idx)
+                        progress += step
+                        progress_var.set(int(progress))
+                        counter += 1
+
+                    if counter == last_status:
+                        cycle -= 1
+                    else:
+                        last_status = counter
+
+                    if cycle == 0:
+                        self.entry1.delete(1.0, END)
+                        self.entry1.insert(1.0, counter)
+                        messagebox.showwarning("Ostrzeżenie",
+                                               f"W podanym tekście nie udało się wygenerować wszystkich luk (Możliwa ilość: {counter})")
+                        answer = messagebox.askyesno('Pytanie', 'Czy chcesz kontynuować?')
+                        if answer == 0:
+                            popup.destroy()
+                            return
+                        else:
+                            progress_var.set(100)
+                            gap_number = counter
         else:
-            while len(set(gap_indexes)) < gap_number:
-                idx = random.randint(0, len(splited) - 1)
+            while len(gap_indexes) < gap_number:
+                popup.update()
+                idx = random.choice(index_left)
 
                 word = splited[idx]
                 for char in PUNCTUATION:
                     word = word.replace(char, '')
                 word = word.lower()
 
-                if word not in self.stop_words:
+                if word not in self.stop_words and len(word) >= 2:
                     gap_indexes.append(idx)
+                    index_left.remove(idx)
+                    progress += step
+                    progress_var.set(int(progress))
+                    counter += 1
 
-        for idx in set(gap_indexes):
+                if counter == last_status:
+                    cycle -= 1
+                else:
+                    last_status = counter
+
+                if cycle == 0:
+                    self.entry1.delete(0, END)
+                    self.entry1.insert(1, counter)
+                    messagebox.showwarning("Ostrzeżenie",
+                                           f"W podanym tekście nie udało się wygenerować wszystkich luk (Możliwa ilość: {counter})")
+                    answer = messagebox.askyesno('Pytanie', 'Czy chcesz kontynuować?')
+                    if answer == 0:
+                        popup.destroy()
+                        return
+                    else:
+                        progress_var.set(100)
+                        gap_number = counter
+
+        for idx in gap_indexes:
             if splited[idx][-1] == '\n':
                 if splited[idx][-2] in PUNCTUATION:
                     splited[idx] = f'........ {splited[idx][-2]}\n'
@@ -209,6 +289,8 @@ class App:
         joined = ' '.join(splited)
         self.text_box.delete(1.0, END)
         self.text_box.insert(1.0, joined)
+
+        popup.destroy()
 
         if gap_number == 1:
             messagebox.showinfo('Sukces', f'Wygenerowano {gap_number} lukę!')
@@ -238,6 +320,7 @@ class App:
         choice = messagebox.askquestion('Tworzenie nowego tekstu', 'Czy chcesz utworzyć nowy tekst?')
         if choice == 'yes':
             self.text_box.delete(1.0, END)
+            self.key_press()
 
     def open_text(self, event=None):
         self.last_text = self.text_box.get(1.0, END)
@@ -257,6 +340,7 @@ class App:
 
         self.text_box.delete(1.0, END)
         self.text_box.insert(1.0, content)
+        self.key_press()
 
     def save_file(self, event=None):
         path = filedialog.asksaveasfilename(title='Zapisz plik',
