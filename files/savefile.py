@@ -3,9 +3,9 @@ import docx
 
 def save_txt(path, content):
     """
-    Funkcja zapisująca przekazaną zawartośc do pliku txt
+    Saving txt file
     """
-    with open(path, 'w') as file:
+    with open(path, 'w', encoding='utf-8') as file:
         file.write(content)
 
     return True
@@ -13,7 +13,7 @@ def save_txt(path, content):
 
 def save_docx(path, content):
     """
-    Funkcja zapisująca przekazaną zawartośc do pliku docx
+    Saving docx file
     """
     doc = docx.Document()
     doc.add_paragraph(content)
