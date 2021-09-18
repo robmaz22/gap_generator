@@ -3,9 +3,9 @@ import docx
 
 def read_txt(path):
     """
-    Funkcja wczytująca zawartość pliku txt
+    Reading txt file
     """
-    with open(path, 'r') as file:
+    with open(path, 'r', encoding='utf-8') as file:
         content = file.read()
 
     return content
@@ -13,7 +13,7 @@ def read_txt(path):
 
 def read_docx(path):
     """
-    Funkcja zwracająca zawartość pliku docx
+    Reading docx file
     """
     doc = docx.Document(path)
     fulltext = []
