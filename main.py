@@ -4,14 +4,12 @@ import json
 import random
 
 import tkinter.ttk as ttk
+from configparser import ConfigParser
 from tkinter import *
-from tkinter import colorchooser
 from tkinter import messagebox
-from tkinter import font
 from tkinter import filedialog
-
 from files import readfile, savefile
-from windows import info
+from windows import config_window, removed_words, info
 
 # basic parameters
 WHITE = "#ffffff"
@@ -22,6 +20,7 @@ PUNCTUATION = ('.', ',' ':', ';', '?', '!')
 
 # noinspection PyUnusedLocal
 class App:
+    parser = None
     stop_words = []
 
     # Loading stopwords from json file
@@ -30,23 +29,24 @@ class App:
         with open('stopwords-pl.json') as f:
             cls.stop_words = json.load(f)
 
+    @classmethod
+    def load_config(cls):
+        cls.parser = ConfigParser()
+        cls.parser.read('config.ini')
+
     def __init__(self, master, width, height):
         #####################################################################################################
         # BASIC APP PROPERTIES
         ####################################################################################################
         self.master = master
         self.master.title('GENERATOR LUK')
+        self.master.iconbitmap('icon.ico')
         self.master.geometry(f'{width}x{height}+{width // 2}+100')
         Grid.rowconfigure(root, index=0, weight=1)
         Grid.columnconfigure(root, index=0, weight=1)
         self.master.minsize(300, 300)
-        self.font = 'Arial'
-        self.font_size = 11
-        self.size_idx = 1
-        self.font_idx = 1
-        self.theme = 'light'
-        self.color = None
         self.last_text = None
+        self.generated = False
 
         #####################################################################################################
         # MAIN WINDOW ELEMENTS
@@ -59,7 +59,7 @@ class App:
         self.entry1.grid(row=3, column=0, pady=1, ipady=int(height / 200))
         self.entry1.insert(1, '10')
 
-        self.run_btn = ttk.Button(self.master, text='Generuj', style='AccentButton', width=window_width // 60,
+        self.run_btn = ttk.Button(self.master, text='Generuj', style='Accent.TButton', width=screen_width // 60,
                                   command=self.generate)
         self.run_btn.grid(row=4,
                           column=0,
@@ -110,8 +110,6 @@ class App:
 
         self.option_menu = Menu(self.menubar, tearoff=0)
         self.option_menu.add_command(label="Preferencje", command=self.config_app)
-        self.option_menu.add_command(label="Ustawienia tekstu", command=self.config_text)
-        self.option_menu.add_checkbutton(label="Tryb ciemny", command=self.change_theme)
         self.menubar.add_cascade(label="Opcje", menu=self.option_menu)
 
         self.helpmenu = Menu(self.menubar, tearoff=0)
@@ -120,38 +118,55 @@ class App:
 
         self.master.config(menu=self.menubar)
 
+        self.set_config()
         #####################################################################################################
         # MAIN FUNCTIONS
         ####################################################################################################
+
+    # set app params
+    def set_config(self):
+        self.font = self.parser['text']['font']
+        self.font_size = self.parser['text']['font_size']
+        self.theme = self.parser['main']['theme_mode']
+        self.color = self.parser['text']['color']
+        self.gap_style = self.parser['main']['gap_style']
+        if self.gap_style == '_':
+            self.gap_style = self.gap_style + ' '
+        self.char_number = self.parser['main']['char_number']
+        self.removed_words = int(self.parser['main']['removed_words'])
+
+        self.text_box.config(font=(self.font, self.font_size), fg=self.color)
+        self.change_theme()
 
     # Counting number of words in the text box
     def key_press(self, event=None):
         words = self.text_box.get("1.0", "end-1c")
         number = words.split()
+        if len(number) == 0:
+            self.generated = False
         self.words_label.config(text=f'Liczba wyrazów: {len(number)}')
 
     # Changing app theme
     def change_theme(self):
-        if self.theme == 'dark':
+        if self.theme == 'light':
             self.master.tk_setPalette(WHITE)
-            ttk.Style().theme_use('azure')
-            self.theme = 'light'
+            self.master.tk.call("set_theme", "light")
+            self.theme = 'dark'
         else:
             root.tk_setPalette(DARK)
-            ttk.Style().theme_use('azure-dark')
-            self.theme = 'dark'
+            self.master.tk.call("set_theme", "dark")
+            self.theme = 'light'
 
     # Showing info window
     def info(self):
-        info.InfoWindow(self.master, self.theme)
-
-    # Showing text preferences window
-    def config_text(self):
-        ConfigText(self.master)
+        info.InfoWindow(self.master, self.theme, (screen_width, screen_height))
 
     # showing app preferences window
     def config_app(self):
-        ConfigApp(self.master)
+        top = config_window.ConfigApp(self.master, self.theme, (screen_width, screen_height))
+        self.master.wait_window(top)
+        self.load_config()
+        self.set_config()
 
     # closing app
     def ask_quit(self):
@@ -171,17 +186,19 @@ class App:
     # generating gaps in text
     def generate(self):
 
-        # reading text from textbox
-        content = self.text_box.get(1.0, END)
-        splited = content.split(' ')
+        # removed words
+        removed_list = []
 
-        if '.........' in splited:
+        # reading text from textbox and save last status
+        self.last_text = self.text_box.get(1.0, END)
+        content = self.last_text.split(' ')
+
+        # if gaps exist
+        if self.generated:
             messagebox.showwarning('Ostrzeżenie', 'W podanym tekscie zostały już wygenerowane luki!')
             answer = messagebox.askyesno('Pytanie', 'Kontynuować?')
             if not answer:
                 return
-
-        self.last_text = self.text_box.get(1.0, END)
 
         # reading number of gaps input
         try:
@@ -190,14 +207,14 @@ class App:
             messagebox.showerror('Błąd', 'Podana wartość musi być liczbą całkowitą!')
             return
 
-        if gap_number >= len(splited) or gap_number <= 0:
+        if gap_number >= len(content) or gap_number <= 0:
             messagebox.showerror('Błąd', 'Błędna liczba luk!')
             return
 
         # showing progress
         popup = Toplevel()
         popup.title('')
-        popup.geometry(f'+{window_width - 50}+{window_height - 300}')
+        popup.geometry(f'+{screen_width - 50}+{screen_height - 300}')
 
         popup.overrideredirect(1)
 
@@ -214,23 +231,25 @@ class App:
         progress_bar.grid(row=1, column=0)
         popup.pack_slaves()
 
-        indices_left = list(range(len(splited)))
+        indices_left = list(range(len(content)))
         gap_indices = []
 
         # If it is possible to put a gap between each word
-        if (len(splited) % 2 == 0 and len(splited) / 2 >= gap_number) or (
-                len(splited) + 1 % 2 == 0 and len(splited) + 1 / 2 >= gap_number):
+        if (len(content) % 2 == 0 and len(content) / 2 >= gap_number) or (
+                len(content) + 1 % 2 == 0 and len(content) + 1 / 2 >= gap_number):
             while len(gap_indices) < gap_number:
                 popup.update()
                 idx = random.choice(indices_left)
 
-                if idx - 1 not in gap_indices and idx + 1 not in gap_indices:
-                    word = splited[idx]
-                    for char in PUNCTUATION:
-                        word = word.replace(char, '')
-                    word = word.lower()
+                if len(content[idx]) <= 2 or not (c.isalpha() for c in content[idx]):
+                    continue
 
-                    if word not in self.stop_words and len(word) >= 2:
+                if idx - 1 not in gap_indices and idx + 1 not in gap_indices:
+                    word = content[idx].lower()
+                    if word[-1] in PUNCTUATION:
+                        word = word[:-1]
+
+                    if word not in self.stop_words:
                         gap_indices.append(idx)
                         indices_left.remove(idx)
                         progress += step
@@ -244,8 +263,8 @@ class App:
 
                     # Progress freeze
                     if cycle == 0:
-                        self.entry1.delete(1.0, END)
-                        self.entry1.insert(1.0, counter)
+                        self.entry1.delete(0, END)
+                        self.entry1.insert(0, counter)
                         messagebox.showwarning("Ostrzeżenie",
                                                f"W podanym tekście nie udało się wygenerować wszystkich luk (Możliwa "
                                                f"ilość: {counter})")
@@ -261,12 +280,14 @@ class App:
                 popup.update()
                 idx = random.choice(indices_left)
 
-                word = splited[idx]
-                for char in PUNCTUATION:
-                    word = word.replace(char, '')
-                word = word.lower()
+                if len(content[idx]) <= 2 or not (c.isalpha() for c in content[idx]):
+                    continue
+                word = content[idx].lower()
 
-                if word not in self.stop_words and len(word) >= 2:
+                if word[-1] in PUNCTUATION:
+                    word = word[:-1]
+
+                if word not in self.stop_words:
                     gap_indices.append(idx)
                     indices_left.remove(idx)
                     progress += step
@@ -291,25 +312,42 @@ class App:
                         progress_var.set(100)
                         gap_number = counter
 
-        for idx in gap_indices:
-            if splited[idx][-1] == '\n':
-                if splited[idx][-2] in PUNCTUATION:
-                    splited[idx] = f'........ {splited[idx][-2]}\n'
-                else:
-                    splited[idx] = f'........\n'
-            elif splited[idx][-1] in PUNCTUATION:
-                if splited[idx][-1] == PUNCTUATION[0]:
-                    splited[idx] = '........ .'
-                else:
-                    splited[idx] = f'........{splited[idx][-1]}'
+        # replace words
+        for idx in sorted(gap_indices):
+            word = content[idx].replace('\n', '').replace('.', '').replace(',', '')
+            # show nr of chars in removed word
+            if self.char_number:
+                char_nr = len(word)
             else:
-                splited[idx] = '.........'
+                char_nr = 8
 
-        joined = ' '.join(splited)
+            if self.removed_words:
+                removed_list.append(word)
+
+            if content[idx][-1] == '\n':
+                if content[idx][-2] in PUNCTUATION:
+                    content[idx] = f'{self.gap_style * char_nr} {content[idx][-2]}\n'
+                else:
+                    content[idx] = f'{self.gap_style * char_nr}\n'
+            elif content[idx][-1] in PUNCTUATION:
+                if content[idx][-1] == PUNCTUATION[0]:
+                    content[idx] = f'{self.gap_style * char_nr} .'
+                else:
+                    content[idx] = f'{self.gap_style * char_nr}{content[idx][-1]}'
+            else:
+                content[idx] = self.gap_style * char_nr
+
+        joined = ' '.join(content)
         self.text_box.delete(1.0, END)
         self.text_box.insert(1.0, joined)
 
         popup.destroy()
+
+        # show removed words
+        if self.removed_words:
+            removed_words.RemovedWords(self.master, removed_list)
+
+        self.generated = True
 
         if gap_number == 1:
             messagebox.showinfo('Sukces', f'Wygenerowano {gap_number} lukę!')
@@ -330,11 +368,13 @@ class App:
 
     def clear_all(self, event=None):
         self.text_box.delete(1.0, END)
+        self.generated = False
 
     #####################################################################################################
     # FILE FUNCTIONS
     ####################################################################################################
     def new_text(self, event=None):
+        self.generated = False
         self.last_text = self.text_box.get(1.0, END)
         choice = messagebox.askquestion('Tworzenie nowego tekstu', 'Czy chcesz utworzyć nowy tekst?')
         if choice == 'yes':
@@ -342,6 +382,7 @@ class App:
             self.key_press()
 
     def open_text(self, event=None):
+        self.generated = False
         self.last_text = self.text_box.get(1.0, END)
         path = filedialog.askopenfilename(title='Wybierz plik',
                                           filetypes=(("Plik tekstowy", "*.txt"),
@@ -377,102 +418,25 @@ class App:
             return
 
 
-# noinspection PyUnusedLocal
-class ConfigText(Toplevel):
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.resizable(False, False)
-        self.title("Ustawienia tekstu")
-        self.font_size = app.font_size
-        self.font = app.font
-        self.color = app.color
-
-        ttk.Label(self, text="Czcionka:").grid(column=0, row=1, padx=10, pady=5)
-        ttk.Label(self, text="Rozmiar tekstu:").grid(column=0, row=2, padx=10, pady=5)
-        ttk.Button(self, text='Kolor', command=self.choose_color).grid(column=2, row=1, rowspan=2, padx=5)
-
-        self.cbox1 = ttk.Combobox(self, width=27)
-        self.cbox2 = ttk.Combobox(self, width=27)
-
-        self.fonts = font.families()
-        self.sizes = list(range(9, 72, 2))
-
-        self.cbox1['values'] = self.sizes
-        self.cbox2['values'] = self.fonts
-
-        self.cbox1.grid(column=1, row=2)
-        self.cbox2.grid(column=1, row=1)
-
-        self.cbox1.current(app.size_idx)
-        self.cbox2.current(app.font_idx)
-
-        labelframe = ttk.LabelFrame(self, text="Przykładowy tekst")
-        labelframe.grid(column=0, row=0, columnspan=3, pady=5)
-
-        self.example = ttk.Label(labelframe, text="Ala ma kota.")
-        self.example.pack()
-
-        self.cbox1.bind("<<ComboboxSelected>>", self.change_example)
-        self.cbox2.bind("<<ComboboxSelected>>", self.change_example)
-
-        ttk.Button(self, text='Zatwierdź', style='AccentButton', command=self.change_font).grid(column=0,
-                                                                                                row=3,
-                                                                                                columnspan=3,
-                                                                                                pady=15)
-
-    def choose_color(self):
-        color_code = colorchooser.askcolor(title="Wybierz kolor")
-        self.attributes('-topmost', True)
-        self.color = color_code[1]
-        self.example.configure(foreground=self.color)
-
-    def change_example(self, event):
-        self.font_size = self.cbox1.get()
-        self.font = self.cbox2.get()
-        self.example.config(font=(self.font, self.font_size))
-
-    def change_font(self):
-        app.text_box.config(font=(self.font, self.font_size), fg=self.color)
-        try:
-            app.size_idx = self.sizes.index(int(self.font_size))
-            app.font_idx = self.fonts.index(self.font)
-            app.color = self.color
-        except ValueError:
-            app.size_idx = 1
-            app.font_idx = 1
-        self.destroy()
-
-
-# noinspection PyUnusedLocal
-class ConfigApp(Toplevel):
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.resizable(False, False)
-        self.title("Preferencje")
-        # TODO zmiana motywów
-        # TODO zmiana motywu luk
-        # TODO Wyświetlanie usuniętych wyrazów
-        # TODO Liczba liter w usuniętym wyrazie
-
-
 if __name__ == '__main__':
 
-    # if running on windows
+    # if running on Windows
     if os.name == 'nt':
         windll.shcore.SetProcessDpiAwareness(1)
 
     App.load_stopwords()
+    App.load_config()
     root = Tk()
 
     # Loading theme
     root.tk.call("source", "Azure-ttk-theme/azure.tcl")
-    root.tk.call("source", "Azure-ttk-theme/azure-dark.tcl")
+    # root.tk.call("source", "Azure-ttk-theme/azure-dark.tcl")
     root.tk_setPalette(WHITE)
-    ttk.Style().theme_use('azure')
+    root.tk.call("set_theme", "light")
 
     # Screen size
-    window_width = root.winfo_screenwidth() // 2
-    window_height = root.winfo_screenheight() // 2 + 200
-    app = App(root, window_width, window_height)
+    screen_width = root.winfo_screenwidth() // 2
+    screen_height = root.winfo_screenheight() // 2 + 200
+    app = App(root, screen_width, screen_height)
 
     root.mainloop()
